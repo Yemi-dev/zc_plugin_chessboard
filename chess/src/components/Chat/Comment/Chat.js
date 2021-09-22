@@ -25,31 +25,36 @@ function Comment() {
   
 
   useEffect(async () => {
-    const {data} = await axios.get(`/api/v1/game/${id}`);
-    setComments(data.comments);
-    setPlayerIds([data.owner.user_id, data.opponent.user_id]);
+    const data = await axios.get(`https://chess.zuri.chat/api/v1/game/6149137ae4b2aebf8ec8cf2b`);
+    console.log(data)
+    setComments(data.data.data.comments);
+    
+    setPlayerIds([data.data.data.owner.user_id, data.data.data.opponent.user_id]);
+    // console.log(playerIds);
   }, []);
 
   const submitForm = () => {
     if(message.length) {
-      axios.patch("https://chess.zuri.chat/api/v1/game/comment",  
+      axios.patch("http://localhost:5050/api/v1/game/comment",  
       {
         comment: message,
-        game_id: id,
+        game_id: "6149137ae4b2aebf8ec8cf2b",
         user_id: "d1a0686b-604d-4e65-9369-d46c30629c75",
         user_name: "jack",
         image_url: "https://www.gravatar.com/avatar/" , 
       }
-      ).then(({data}) => {
-        const submitted = {
-          id: "d1a0686b-604d-4e65-9369-d46c30629c75",
-          message: data.data.text,
-          name: data.data.user_name,
-          time: moment(data.timestamp).format("h:mm a"),
-          image: data.data.image_url
-        };
-        setComments([...comments, submitted]);
-        setMessage("");
+      ).then((res) => {
+        // // const submitted = {
+        // //   user_id: "d1a0686b-604d-4e65-9369-d46c30629c75",
+        // //   text: data.data.data.text,
+        // //   user_name: data.data.data.user_name,
+        // //   timestamp: moment(data.data.data.timestamp).format("h:mm a"),
+        // //   image_url: data.data.data.image_url
+        // };
+        console.log(res)
+
+        // setComments([...comments, submitted]);
+        // setMessage("");
       }).catch(err => console.log(err));
     }
     // if(message.length) {
@@ -69,17 +74,18 @@ function Comment() {
   return (
     <div className="chatContainer">
       {comments.length ? (
-        comments.map(({ id, name, time, message, image }) => (
+        comments.map(({ id, user_name, timestamp, text, image_url }) => (
           <div className="chatWrapper" key={id}>
             <div className="specHead">
-              <img className="specAvi" src={image} alt="avi" />
+              <img className="specAvi" src={image_url} alt="avi" />
               <div className="specInfo">
-                <h2 className="spectatorName">{name}</h2>
-                {time ? <p className="time-muted">{time}</p> : null}
+                <h2 className="spectatorName">{user_name}</h2>
+                
+                {timestamp ? <p className="time-muted">{moment(timestamp).format("h:mm a")}</p> : null}
               </div>
             </div>
             <div className="specNameTime">
-              <p className="spectatorMessage">{message}</p>
+              <p className="spectatorMessage">{text}</p>
             </div>
           </div>
         ))
