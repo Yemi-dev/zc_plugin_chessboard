@@ -239,9 +239,11 @@ class GameController {
       // build payload
       const payload = {
         event: "piece_moved",
-        user_id,
-        position_fen,
-        board_state,
+        move: {
+          user_id,
+          position_fen,
+          board_state,
+        }
       };
 
       // update the database
@@ -399,6 +401,7 @@ class GameController {
 
       const payload = {
         event: "end_game",
+        is_owner_winner,
         winner: is_owner_winner
           ? gameDBData.data.owner.user_id
           : gameDBData.data.opponent.user_id,
@@ -532,7 +535,7 @@ class GameController {
     // publish to centrifugo
     const payload = {
       event: "comments",
-      comment,
+      comment: single_comment,
     };
 
     await centrifugoController.publish(game_id, payload);

@@ -25,28 +25,27 @@ function ChessBoard({ type, gameData }) {
     [gameData.opponent?.user_id]: gameData.opponent?.color,
   };
 
-  // Get Latest Previous Board positon or Initialize the board position
-  const [board_position, set_board_position] = useState(
-    gameData.moves.length > 0 ? gameData.moves.at(-1).position_fen : "start"
-  );
+  const [board_position, set_board_position] = useState("");
   const [color_to_play, set_color_to_play] = useState(null);
   const [squareStyles, setSquareStyles] = useState({});
   const [history, setHistory] = useState([]);
   const [pieceSquare, setPieceSquare] = useState(null);
 
-  // State of Game Winner Modal
-  const [gameWinner, setGameWinner] = useState(null);
-  const [showGameWinnerModal, setShowGameWinnerModal] = useState(false);
-
   useEffect(() => {
-    // Set Chess engine to use Previous Board positons or Initialize the new
-    GameEngine.current = new Chess(
-      gameData.moves.length > 0 ? gameData.moves.at(-1).position_fen : ""
-    );
+    // Continue Game Functionality
+    if (gameData.moves.length > 0) {
+      // Set Chess engine to use Previous Board positons or Initialize the new
+      GameEngine.current = new Chess(gameData.moves.at(-1).position_fen);
+      // Get Latest Previous Board positon or Initialize the board position
+      set_board_position(gameData.moves.at(-1).position_fen)
+    } else {
+      GameEngine.current = new Chess();
+      set_board_position("start");
+    }
 
     // Set Color to play
     set_color_to_play(GameEngine.current.fen().split(" ")[1]);
-  }, []);
+  }, [gameData]);
 
   const chessPieces = () => {
     return [
@@ -95,7 +94,7 @@ function ChessBoard({ type, gameData }) {
       GameEngine.current.game_over() ||
       color_to_play != players_to_color_map[getLoggedInUserData().user_id]
     ) {
-      return false;
+      return true;
     } else {
       return true;
     }
@@ -119,9 +118,7 @@ function ChessBoard({ type, gameData }) {
     UpdatePieceMove(game_id, move, GameEngine.current.fen()).then(
       (response) => {
         if (!response.data.success) {
-          // TODO: Handle error with Toasts
-          console.log("Piece Move Not Successful: ", response.data.message);
-        } else {
+          // TODO: Handle error with Toasts        } else {
           // Update the Board with last move
           setHistory(GameEngine.current.history({ verbose: true }));
         }
@@ -179,24 +176,20 @@ function ChessBoard({ type, gameData }) {
     };
   };
 
-  if (GameEngine.current) {
-    // Game Over Handler
-    if (GameEngine.current.in_checkmate() === true) {
-      let winner;
+  let gameWinner = null;
+  if (GameEngine.current && GameEngine.current.in_checkmate() === true) {
 
-      color_to_play === "w"
-        ? (winner = gameData.opponent)
-        : (winner = gameData.owner);
+    color_to_play === "w"
+      ? (gameWinner = gameData.opponent)
+      : (gameWinner = gameData.owner);
 
-      setGameWinner({ winner });
-
-      // Update Game winner API Call
-      UpdateGameWinner(game_id, winner.user_id).then((response) => {
+    // Winner Has Not Been Announced
+    if (gameData.status !== 2 && gameData.owner.user_id !== getLoggedInUserData().user_id || gameData.opponent.user_id !== getLoggedInUserData().user_id) {
+      // Update Game winner API Call (Announce Winner)  
+      UpdateGameWinner(game_id, gameWinner.user_id).then((response) => {
         if (!response.data.success) {
           // TODO: Handle error with Toasts
-          console.log("Unable to Set Game Winner: ", response.data.message);
-        } else {
-          setShowGameWinnerModal(true);
+          console.log("Error updating game winner");
         }
       });
     }
@@ -261,7 +254,7 @@ function ChessBoard({ type, gameData }) {
           name={gameData.owner.user_name}
         />
       </div>
-      {showGameWinnerModal ? <GameWinnerModal winner={gameWinner} /> : null}
+      {gameWinner !== null ? <GameWinnerModal winner={gameWinner} /> : null}
     </>
   );
 }
